@@ -250,6 +250,9 @@ var goroutines int32
 func propagateCancel(parent Context, child canceler) {
 	done := parent.Done()
 	if done == nil {
+		// parent.Done()返回nil表明父Context不支持取消操作
+        	// 大部分情况下，该父context已是根context，
+        	// 该父context是通过context.Background()，或者context.ToDo()创建的
 		return // parent is never canceled
 	}
 
@@ -271,7 +274,7 @@ func propagateCancel(parent Context, child canceler) {
 			if p.children == nil {
 				p.children = make(map[canceler]struct{})
 			}
-			p.children[child] = struct{}{}
+			p.children[child] = struct{}{} // 加入 父 context 的 children
 		}
 		p.mu.Unlock()
 	} else {
@@ -408,8 +411,11 @@ func (c *cancelCtx) cancel(removeFromParent bool, err error) {
 	c.err = err
 	d, _ := c.done.Load().(chan struct{})
 	if d == nil {
+		// 未先进行Done调用，而先行调用Cancel, 此时done是nil，
+    		// 这时候复用全局已关闭的通道
 		c.done.Store(closedchan)
 	} else {
+		// 关闭Done返回的通道，发送关闭信号
 		close(d)
 	}
 	for child := range c.children {
@@ -420,6 +426,7 @@ func (c *cancelCtx) cancel(removeFromParent bool, err error) {
 	c.mu.Unlock()
 
 	if removeFromParent {
+		// 将当前context从其父级context中移除掉，子代取消操作时候，removeFromParent一直都是false
 		removeChild(c.Context, c)
 	}
 }

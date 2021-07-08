@@ -274,6 +274,7 @@ func propagateCancel(parent Context, child canceler) {
 		}
 		p.mu.Unlock()
 	} else {
+		// 父级 cancelCtx 已取消或特殊实现，则直接 select parent.Done()
 		atomic.AddInt32(&goroutines, +1)
 		go func() {
 			select {

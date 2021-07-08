@@ -262,6 +262,7 @@ func propagateCancel(parent Context, child canceler) {
 	}
 
 	if p, ok := parentCancelCtx(parent); ok {
+		// 存在父级 cancelCtx 且为官方实现 done
 		p.mu.Lock()
 		if p.err != nil {
 			// parent has already been canceled
@@ -274,6 +275,7 @@ func propagateCancel(parent Context, child canceler) {
 		}
 		p.mu.Unlock()
 	} else {
+		// 父级 cancelCtx 已关闭或为自定义实现
 		atomic.AddInt32(&goroutines, +1)
 		go func() {
 			select {
